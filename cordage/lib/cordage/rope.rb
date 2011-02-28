@@ -2,13 +2,15 @@ require 'forwardable'
 
 module Cordage
   CordageError = Class.new(StandardError)
-  
+  REBALANCE_AT = 100
+
   class Rope
     extend Forwardable
     attr_reader :root
-    
+
     def initialize(seed)
       @root = LeafNode.new(seed)
+      @nodes = 1
     end
 
     def << (other)
@@ -23,10 +25,39 @@ module Cordage
           raise CordageError.new("Can't append type: #{other.class}")
       end
       @root = Concatenation.new(@root, other_node)
-      @root.rebalance
+      @nodes += 1
+      if @nodes % REBALANCE_AT == 0
+        rebalance
+      end
+      self
     end
 
-    def_delegators :@root, :to_s, :each, :depth
+    def rebalance
+      @root = rebuild(leaves)
+    end
+
+    def leaves
+      @root.collect_leaves
+    end
+
+    def rebuild(nodes)
+      size = nodes.size
+      case size
+        when 1
+          nodes.first
+        when 2
+          Concatenation.new(nodes.first, nodes.last)
+        else
+          m = size/2
+          Concatenation.new(rebuild(nodes[0...m]), rebuild(nodes[m..size]))
+      end
+    end
+
+    def_delegator :@root, :size, :length
+    def_delegators :@root, :to_s, :each, :depth, :size, :[], :[]=
+
+    private
+    
   end
 
   class LeafNode
@@ -41,11 +72,12 @@ module Cordage
       1
     end
 
-    def rebalance
+    def collect_leaves
+      [self]
     end
-
+    
     def_delegator :@value, :each_char, :each
-    def_delegators :@value, :to_s
+    def_delegators :@value, :to_s, :size, :char_at, :[], :[]=
   end
 
   class Concatenation
@@ -67,51 +99,44 @@ module Cordage
       [@left.depth, @right.depth].max+1
     end
 
-    def imbalance
-      @left.depth - @right.depth
+    def size
+      @left.size + @right.size
     end
 
-    def rebalance
-      imb = imbalance
-      until (-1..1).include?(imb) do
-        @left.rebalance
-        @right.rebalance
-        if left_heavy? imb
-          if @left.imbalance >= 0
-            rotate_right
-          else
-            @left.rotate_left
-            rotate_right
-          end
-        elsif right_heavy? imb
-          if @right.imbalance <= 0
-            rotate_left
-          else
-            @right.rotate_right
-            rotate_left
-          end
+    def [](first, length=1)
+      if first.is_a?(Range)
+        first, length = first.first, first.last-first.first
+      end
+      left_size = @left.size
+      if first >= left_size
+        @right[first-left_size, length]
+      else
+        str = @left[first, length]
+        if str.size < length
+          str << @right[0, length-str.size]
         end
-        imb = imbalance
+        str
       end
     end
 
-    def left_heavy?(imb)
-      imb > 1
+    def []=(first, length=1, new_str)
+      if first.is_a?(Range)
+        first, length = first.first, first.last-first.first
+      end
+      left_size = @left.size
+      if first >= left_size
+        @right[first-left_size, length]=new_str
+      else
+        str = @left[first, length]
+        if str.size < length
+          @right[0, length-str.size]=""
+        end
+        @left[first, length]=new_str
+      end
     end
 
-    def right_heavy?(imb)
-      imb < -1
+    def collect_leaves
+      @left.collect_leaves + @right.collect_leaves
     end
-
-    def rotate_right
-      @right = Concatenation.new(@left.right, @right)
-      @left = @left.left
-    end
-
-    def rotate_left
-      @left = Concatenation.new(@left, @right.left)
-      @right = @right.right
-    end
-
   end
 end
