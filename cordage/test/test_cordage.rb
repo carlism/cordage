@@ -101,4 +101,12 @@ class TestCordage < Test::Unit::TestCase
     assert @rope.root.depth < 10
     assert_equal 411, @rope.size
   end
+
+  def test_insert_at
+    @rope.insert_at(4, "999")
+    assert_equal "test999 string", @rope.to_s
+
+    @rope.insert_at(4, "111")
+    assert_equal "test111999 string", @rope.to_s
+  end
 end

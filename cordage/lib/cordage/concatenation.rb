@@ -61,5 +61,24 @@ module Cordage
     def collect_leaves
       @left.collect_leaves + @right.collect_leaves
     end
+
+    def insert_at(index, text)
+      left_size = @left.size
+      side = @left
+      if index >= left_size
+        side = @right
+        index -= left_size
+      end
+      case side
+        when Concatenation
+          side.insert_at(index, text)
+        when LeafNode
+          if side == @left
+            @left = Cordage.split_and_insert(side, index, text)
+          else
+            @right = Cordage.split_and_insert(side, index, text)
+          end
+      end
+    end
   end
 end

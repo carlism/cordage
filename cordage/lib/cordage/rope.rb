@@ -3,8 +3,22 @@ require_relative 'leaf_node'
 require_relative 'concatenation'
 
 module Cordage
+  extend self
   CordageError = Class.new(StandardError)
   REBALANCE_AT = 100
+
+  def split_and_insert(leaf, index, text)
+    if index == 0
+      Concatenation.new(LeafNode.new(text), leaf)
+    elsif index == leaf.size
+      Concatenation.new(leaf, LeafNode.new(text))
+    else
+      left = LeafNode.new(leaf.value[0...index])
+      right = LeafNode.new(leaf.value[index..leaf.size])
+      middle = LeafNode.new(text)
+      Concatenation.new(left, Concatenation.new(middle, right))
+    end
+  end
 
   class Rope
     extend Forwardable
@@ -48,6 +62,15 @@ module Cordage
         else
           m = size/2
           Concatenation.new(rebuild(nodes[0...m]), rebuild(nodes[m..size]))
+      end
+    end
+
+    def insert_at(index, text)
+      case @root
+        when Concatenation
+          @root.insert_at(index, text)
+        when LeafNode
+          @root = Cordage.split_and_insert(@root, index, text)
       end
     end
 
