@@ -1,7 +1,4 @@
-$:.unshift(File.dirname(__FILE__)) unless
-  $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
-
-require 'cordage/rope'
+require_relative 'cordage/rope'
 
 module Cordage
   VERSION = '0.0.1'

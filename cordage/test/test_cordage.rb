@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/helper.rb'
+require_relative 'helper'
 
 class TestCordage < Test::Unit::TestCase
 

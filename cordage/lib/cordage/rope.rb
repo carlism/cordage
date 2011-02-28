@@ -1,4 +1,6 @@
 require 'forwardable'
+require_relative 'leaf_node'
+require_relative 'concatenation'
 
 module Cordage
   CordageError = Class.new(StandardError)
@@ -33,11 +35,7 @@ module Cordage
     end
 
     def rebalance
-      @root = rebuild(leaves)
-    end
-
-    def leaves
-      @root.collect_leaves
+      @root = rebuild(@root.collect_leaves)
     end
 
     def rebuild(nodes)
@@ -55,88 +53,5 @@ module Cordage
 
     def_delegator :@root, :size, :length
     def_delegators :@root, :to_s, :each, :depth, :size, :[], :[]=
-
-    private
-    
-  end
-
-  class LeafNode
-    extend Forwardable
-    attr_reader :value
-
-    def initialize(seed)
-      @value = seed
-    end
-
-    def depth
-      1
-    end
-
-    def collect_leaves
-      [self]
-    end
-    
-    def_delegator :@value, :each_char, :each
-    def_delegators :@value, :to_s, :size, :char_at, :[], :[]=
-  end
-
-  class Concatenation
-    attr_reader :left, :right
-    def initialize(left, right)
-      @left, @right = left, right
-    end
-
-    def to_s
-      @left.to_s + @right.to_s
-    end
-
-    def each(&block)
-      @left.each(&block)
-      @right.each(&block)
-    end
-
-    def depth
-      [@left.depth, @right.depth].max+1
-    end
-
-    def size
-      @left.size + @right.size
-    end
-
-    def [](first, length=1)
-      if first.is_a?(Range)
-        first, length = first.first, first.last-first.first
-      end
-      left_size = @left.size
-      if first >= left_size
-        @right[first-left_size, length]
-      else
-        str = @left[first, length]
-        if str.size < length
-          str << @right[0, length-str.size]
-        end
-        str
-      end
-    end
-
-    def []=(first, length=1, new_str)
-      if first.is_a?(Range)
-        first, length = first.first, first.last-first.first
-      end
-      left_size = @left.size
-      if first >= left_size
-        @right[first-left_size, length]=new_str
-      else
-        str = @left[first, length]
-        if str.size < length
-          @right[0, length-str.size]=""
-        end
-        @left[first, length]=new_str
-      end
-    end
-
-    def collect_leaves
-      @left.collect_leaves + @right.collect_leaves
-    end
   end
 end

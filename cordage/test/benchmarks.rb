@@ -1,5 +1,5 @@
 require 'benchmark'
-require File.dirname(__FILE__) + '/helper.rb'
+require_relative 'helper'
 
 Cordage::REBALANCE_AT = 60000
 n = 5000
